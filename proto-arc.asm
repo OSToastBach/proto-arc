@@ -5,7 +5,7 @@
 .equ _DEBUG, 1
 .equ _ENABLE_MUSIC, 1
 .equ _FIX_FRAME_RATE, 0					; useful for !DDT breakpoints
-.equ _SYNC_EDITOR, 1
+.equ _SYNC_EDITOR, 0
 
 .equ Screen_Banks, 3
 .equ Screen_Mode, 9
@@ -70,6 +70,9 @@ main:
 	SWI OS_WriteC
 	SWI OS_WriteC
 
+	adr r0, loading_string
+	swi OS_WriteO
+
 	; LOAD STUFF HERE!
 
 .if _ENABLE_MUSIC
@@ -117,8 +120,9 @@ main:
 	; LATE INITALISATION HERE!
 
 	; Sync tracker.
-	bl rocket_init
-	bl rocket_start
+	;bl rocket_init
+	;bl rocket_start
+	swi QTM_Start
 
 	; Enable Vsync event
 	mov r0, #OSByte_EventEnable
@@ -141,7 +145,7 @@ main_loop:
 	str r2, last_vsync
 
 	; R0 = vsync delta since last frame.
-	bl rocket_update
+	;bl rocket_update
 
 	; show debug
 	.if _DEBUG
@@ -151,7 +155,6 @@ main_loop:
 	; DO STUFF HERE!
 	bl get_next_screen_for_writing
 	mov r0, #0
-	bl rocket_sync_get_val_hi
 	bl show_screen_at_vsync
 
 	; exit if Escape is pressed
@@ -197,15 +200,8 @@ debug_write_vsync_count:
 	swi OS_ConvertHex2
 	adr r0, debug_string
 	swi OS_WriteO
-.else
-	ldr r0, rocket_sync_time
-	adr r1, debug_string
-	mov r2, #8
-	swi OS_ConvertHex4
-
-	adr r0, debug_string
-	swi OS_WriteO
 .endif
+
 	mov pc, r14
 
 debug_string:
@@ -332,6 +328,7 @@ event_handler:
 	LDMIA sp!, {r2-r12}
 	LDMIA sp!, {r0-r1, pc}
 
+
 ; TODO: rename these to be clearer.
 scr_bank:
 	.long 0				; current VIDC screen bank being written to.
@@ -398,11 +395,14 @@ get_next_screen_for_writing:
 ; Additional code modules
 ; ============================================================================
 
-.include "lib/rocket.asm"
+;.include "lib/rocket.asm"
 
 ; ============================================================================
 ; Data Segment
 ; ============================================================================
+
+loading_string:
+	.byte "Loading...", 0
 
 .if _ENABLE_MUSIC
 module_filename:
